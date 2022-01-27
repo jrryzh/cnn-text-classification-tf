@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import re
 
@@ -23,23 +25,25 @@ def clean_str(string):
     return string.strip().lower()
 
 
-def load_data_and_labels(positive_data_file, negative_data_file):
+def load_data_and_labels(data_file_path):
     """
     Loads MR polarity data from files, splits the data into words and generates labels.
     Returns split sentences and labels.
     """
     # Load data from files
-    positive_examples = list(open(positive_data_file, "r", encoding='utf-8').readlines())
-    positive_examples = [s.strip() for s in positive_examples]
-    negative_examples = list(open(negative_data_file, "r", encoding='utf-8').readlines())
-    negative_examples = [s.strip() for s in negative_examples]
+    file_list = os.listdir(data_file_path)
+    file_list.sort()
+    example_list = [[s.strip() for s in s_list] for s_list in
+                    [open(data_file_path + file, "r", encoding="utf-8").readlines() for file in
+                     file_list]]
+
     # Split by words
-    x_text = positive_examples + negative_examples
+    x_text = list(np.concatenate(example_list))
     x_text = [clean_str(sent) for sent in x_text]
+
     # Generate labels
-    positive_labels = [[0, 1] for _ in positive_examples]
-    negative_labels = [[1, 0] for _ in negative_examples]
-    y = np.concatenate([positive_labels, negative_labels], 0)
+    N, M = len(example_list), len(example_list[0])  # N=20,M=50
+    y = np.concatenate([[list(label)]*M for label in list(np.identity(N, dtype=np.int))],0)
     return [x_text, y]
 
 
@@ -49,7 +53,7 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
     """
     data = np.array(data)
     data_size = len(data)
-    num_batches_per_epoch = int((len(data)-1)/batch_size) + 1
+    num_batches_per_epoch = int((len(data) - 1) / batch_size) + 1
     for epoch in range(num_epochs):
         # Shuffle the data at each epoch
         if shuffle:

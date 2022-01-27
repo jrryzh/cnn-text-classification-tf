@@ -14,8 +14,8 @@ from tensorflow.contrib import learn
 
 # Data loading params
 tf.flags.DEFINE_float("dev_sample_percentage", .1, "Percentage of the training data to use for validation")
-tf.flags.DEFINE_string("positive_data_file", "./data/rt-polaritydata/rt-polarity.pos", "Data source for the positive data.")
-tf.flags.DEFINE_string("negative_data_file", "./data/rt-polaritydata/rt-polarity.neg", "Data source for the negative data.")
+tf.flags.DEFINE_string("data_file_path", "/home/newdisk/zjy/datasets/PascalSentenceDataset/merged_sentence/",
+                       "Data source")
 
 # Model Hyperparameters
 tf.flags.DEFINE_integer("embedding_dim", 128, "Dimensionality of character embedding (default: 128)")
@@ -28,13 +28,15 @@ tf.flags.DEFINE_float("l2_reg_lambda", 0.0, "L2 regularization lambda (default: 
 tf.flags.DEFINE_integer("batch_size", 64, "Batch Size (default: 64)")
 tf.flags.DEFINE_integer("num_epochs", 200, "Number of training epochs (default: 200)")
 tf.flags.DEFINE_integer("evaluate_every", 100, "Evaluate model on dev set after this many steps (default: 100)")
-tf.flags.DEFINE_integer("checkpoint_every", 100, "Save model after this many steps (default: 100)")
+tf.flags.DEFINE_integer("checkpoint_every", 500, "Save model after this many steps (default: 100)")
 tf.flags.DEFINE_integer("num_checkpoints", 5, "Number of checkpoints to store (default: 5)")
 # Misc Parameters
 tf.flags.DEFINE_boolean("allow_soft_placement", True, "Allow device soft device placement")
 tf.flags.DEFINE_boolean("log_device_placement", False, "Log placement of ops on devices")
 
 FLAGS = tf.flags.FLAGS
+
+
 # FLAGS._parse_flags()
 # print("\nParameters:")
 # for attr, value in sorted(FLAGS.__flags.items()):
@@ -47,7 +49,7 @@ def preprocess():
 
     # Load data
     print("Loading data...")
-    x_text, y = data_helpers.load_data_and_labels(FLAGS.positive_data_file, FLAGS.negative_data_file)
+    x_text, y = data_helpers.load_data_and_labels(FLAGS.data_file_path)
 
     # Build vocabulary
     max_document_length = max([len(x.split(" ")) for x in x_text])
@@ -72,14 +74,15 @@ def preprocess():
     print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
     return x_train, y_train, vocab_processor, x_dev, y_dev
 
+
 def train(x_train, y_train, vocab_processor, x_dev, y_dev):
     # Training
     # ==================================================
 
     with tf.Graph().as_default():
         session_conf = tf.ConfigProto(
-          allow_soft_placement=FLAGS.allow_soft_placement,
-          log_device_placement=FLAGS.log_device_placement)
+            allow_soft_placement=FLAGS.allow_soft_placement,
+            log_device_placement=FLAGS.log_device_placement)
         sess = tf.Session(config=session_conf)
         with sess.as_default():
             cnn = TextCNN(
@@ -144,9 +147,9 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                 A single training step
                 """
                 feed_dict = {
-                  cnn.input_x: x_batch,
-                  cnn.input_y: y_batch,
-                  cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
+                    cnn.input_x: x_batch,
+                    cnn.input_y: y_batch,
+                    cnn.dropout_keep_prob: FLAGS.dropout_keep_prob
                 }
                 _, step, summaries, loss, accuracy = sess.run(
                     [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
@@ -160,9 +163,9 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                 Evaluates model on a dev set
                 """
                 feed_dict = {
-                  cnn.input_x: x_batch,
-                  cnn.input_y: y_batch,
-                  cnn.dropout_keep_prob: 1.0
+                    cnn.input_x: x_batch,
+                    cnn.input_y: y_batch,
+                    cnn.dropout_keep_prob: 1.0
                 }
                 step, summaries, loss, accuracy = sess.run(
                     [global_step, dev_summary_op, cnn.loss, cnn.accuracy],
@@ -188,9 +191,11 @@ def train(x_train, y_train, vocab_processor, x_dev, y_dev):
                     path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                     print("Saved model checkpoint to {}\n".format(path))
 
+
 def main(argv=None):
     x_train, y_train, vocab_processor, x_dev, y_dev = preprocess()
     train(x_train, y_train, vocab_processor, x_dev, y_dev)
+
 
 if __name__ == '__main__':
     tf.app.run()
